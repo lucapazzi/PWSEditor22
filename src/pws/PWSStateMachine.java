@@ -125,6 +125,14 @@ public class PWSStateMachine extends StateMachine {
         }
     }
 
+    /**
+     * LEGACY: Old transition-semantics implementation.
+     * This method has been replaced by
+     * SemanticsVisitor.computeTransitionContribution(t, base, asm)
+     * for fixed-point computation in the visitor.
+     * It remains here only to support UI tasks such as
+     * displaying per-transition semantics in the editor.
+     */
     public Semantics computeTransitionSemantics(PWSTransition t) {
         if (t.isTriggerable() || ((PWSState) t.getSource()).isPseudoState()) {
             return computeTriggerableSemantics(t);
@@ -190,29 +198,29 @@ public class PWSStateMachine extends StateMachine {
         return result;
     }
 
-    public Semantics computeStateSemantics(PWSState s) {
-        Semantics orSem = Semantics.bottom(assembly.getAssemblyId());
-
-        // Calcola la semantica dalle transizioni entranti
-        List<TransitionInterface> incoming = s.getIncomingTransitions();
-        if (incoming != null) {
-            for (TransitionInterface t : incoming) {
-                if (t instanceof PWSTransition) {
-                    Semantics ts = computeTransitionSemantics((PWSTransition) t);
-                    orSem = (orSem.getConfigurations().isEmpty()) ? ts : orSem.OR(ts);
-                }
-            }
-        }
-
-        // Calcola la semantica autonoma separatamente
-        HashSet<ExitZone> reactiveSem = computeReactiveSemantics(orSem);
-
-        // Potrebbe essere utile assegnare le nuove semantiche al PWSState, per esempio:
-        s.setReactiveSemantics(reactiveSem);
-        // Per quanto riguarda le constraints, potremmo aggiungere una logica simile in futuro.
-
-        return orSem;
-    }
+//    public Semantics computeStateSemantics(PWSState s) {
+//        Semantics orSem = Semantics.bottom(assembly.getAssemblyId());
+//
+//        // Calcola la semantica dalle transizioni entranti
+//        List<TransitionInterface> incoming = s.getIncomingTransitions();
+//        if (incoming != null) {
+//            for (TransitionInterface t : incoming) {
+//                if (t instanceof PWSTransition) {
+//                    Semantics ts = computeTransitionSemantics((PWSTransition) t);
+//                    orSem = (orSem.getConfigurations().isEmpty()) ? ts : orSem.OR(ts);
+//                }
+//            }
+//        }
+//
+//        // Calcola la semantica autonoma separatamente
+//        HashSet<ExitZone> reactiveSem = computeReactiveSemantics(orSem);
+//
+//        // Potrebbe essere utile assegnare le nuove semantiche al PWSState, per esempio:
+//        s.setReactiveSemantics(reactiveSem);
+//        // Per quanto riguarda le constraints, potremmo aggiungere una logica simile in futuro.
+//
+//        return orSem;
+//    }
 
     public HashSet<ExitZone> computeReactiveSemantics(Semantics baseSemantics) {
         HashSet<ExitZone> reactiveSem = new HashSet<>();

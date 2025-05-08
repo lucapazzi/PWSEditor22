@@ -5,6 +5,9 @@ import java.util.logging.Logger;
 import java.util.logging.Level;
 import java.util.ArrayList;
 
+import assembly.Action;
+import smalgebra.TrueProposition;
+
 import machinery.StateInterface;
 import pws.PWSState;
 import pws.PWSStateMachine;
@@ -51,6 +54,7 @@ public class SemanticsVisitor {
         int iter = 0;
         int maxIter = 1000; // example cap, adjust as necessary
         while (changed && iter < maxIter) {
+            logger.info("Iteration " + (iter + 1) + ":");
             changed = false;
             // Update each non-pseudostate’s reactive semantics before computing new state semantics
             for (PWSState ps : new ArrayList<>(semMap.keySet())) {
@@ -71,6 +75,7 @@ public class SemanticsVisitor {
                 }
             }
             iter++;
+            logger.info("------------------------------");
         }
         if (iter >= maxIter) {
             logger.warning("SemanticsVisitor reached iteration cap (" + maxIter + " iterations) for machine '" + machine.getName() + "'. Results may not have fully converged.");
@@ -103,17 +108,15 @@ public class SemanticsVisitor {
             PWSState target,
             PWSStateMachine machine,
             Map<PWSState, Semantics> currentMap) {
-
-        // Log entry into this method for the given target state
         logger.info(">> computeStateSemanticsOnce START for target='" + target.getName() + "'");
+        logger.info("    Current semantics for state '" + target.getName() + "': " + currentMap.get(target));
+
 
         // Retrieve the assembly context for semantics conversions
         Assembly asm = machine.getAssembly();
         // Initialize accumulator to ⊥ (no configurations) for fixed-point aggregation
         Semantics agg = Semantics.bottom(asm.getAssemblyId());
 
-        // Log the number of transitions to evaluate for this state
-        logger.info("Processing " + machine.getTransitions().size() + " transitions for state '" + target.getName() + "'");
 
         // Iterate through all transitions in the machine
         for (TransitionInterface ti : machine.getTransitions()) {
@@ -123,13 +126,51 @@ public class SemanticsVisitor {
             PWSTransition t = (PWSTransition) ti;
             // Only process transitions whose target matches the current state
             if (t.getTarget() != target) continue;
-            // Delegate the semantics computation of this transition to the machine
-            Semantics contrib = machine.computeTransitionSemantics(t);
+            PWSState src = (PWSState) t.getSource();
+            // Use working semantics instead of state fields
+            Semantics base = currentMap.get(src);
+            Semantics contrib = computeTransitionContribution(t, base, asm);
+            logger.info("Transition from '" + src.getName() + "': "
+                    + currentMap.get(src)
+                    + " contributes " + contrib
+                    + " to state '" + target.getName() + "'");
             // OR-accumulate the contribution into the aggregate for target state
             agg = agg.OR(contrib);
         }
 
         logger.info("<< computeStateSemanticsOnce END for target='" + target.getName() + "': result=" + agg);
         return agg;
+    }
+    /**
+     * Compute a single transition’s contribution using the working base semantics.
+     */
+    private static Semantics computeTransitionContribution(
+            PWSTransition t,
+            Semantics base,
+            Assembly asm) {
+        Semantics result;
+        // Triggerable or initial
+        if (t.isTriggerable() || ((PWSState) t.getSource()).isPseudoState()) {
+            Semantics guardSem = t.getGuardProposition().toSemantics(asm);
+            result = base.AND(guardSem);
+        } else {
+            // Reactive/autonomous
+            result = Semantics.bottom(asm.getAssemblyId());
+            for (ExitZone ez : ((PWSState) t.getSource()).getReactiveSemantics()) {
+                if (t.getGuardProposition() instanceof TrueProposition
+                        || ez.getTarget().equals(t.getGuardProposition())) {
+                    Semantics frag = base.transformByMachineTransition(
+                            ez.getStateMachineId(),
+                            ez.getTransition(),
+                            asm);
+                    result = result.OR(frag);
+                }
+            }
+        }
+        // Apply post-actions
+        for (Action a : t.getActionList()) {
+            result = result.transformByMachineEvent(a.getMachineId(), a.getEvent(), asm);
+        }
+        return result;
     }
 }

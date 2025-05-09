@@ -23,6 +23,10 @@ import java.awt.event.ActionEvent;
 import java.awt.*;
 import java.io.*;
 
+import pws.editor.PWSStateMachineEditor;
+import pws.editor.PWSStateMachinePanel;
+import javax.swing.JCheckBoxMenuItem;
+
 public class PWSEditor extends JFrame {
 
     // private Assembly assembly;
@@ -295,6 +299,20 @@ public class PWSEditor extends JFrame {
         editMenu.add(editModeItem);
 
         menuBar.add(editMenu);
+
+        // --- View menu: toggle state annotations ---
+        JMenu viewMenu = new JMenu("View");
+        JCheckBoxMenuItem showStateAnn = new JCheckBoxMenuItem("Show State Annotations", false);
+        showStateAnn.addActionListener(e -> {
+            boolean show = showStateAnn.isSelected();
+            // Retrieve the PWSStateMachinePanel and toggle annotations
+            PWSStateMachinePanel panel =
+                (PWSStateMachinePanel)((PWSStateMachineEditor) baseEditor).getStateMachinePanel();
+            panel.setShowStateAnnotations(show);
+            panel.repaint();
+        });
+        viewMenu.add(showStateAnn);
+        menuBar.add(viewMenu);
         return menuBar;
     }
 

@@ -66,11 +66,14 @@ public class PWSState extends State {
     }
 
     public boolean isAnnotationVisible() {
-        return annotation != null && annotation.isVisible();
+        return annotationVisible;
     }
 
     public void setAnnotationVisible(boolean visible) {
         this.annotationVisible = visible;
+        if (annotation != null) {
+            annotation.setVisible(visible);
+        }
     }
 
     public Semantics getStateSemantics() {

@@ -13,6 +13,8 @@ import java.awt.event.MouseEvent;
 import java.util.List;
 import java.util.Collection;
 import java.util.StringJoiner;
+
+import pws.editor.semantics.ExitZone;
 import pws.editor.semantics.Semantics;
 import java.awt.Color;
 
@@ -22,7 +24,6 @@ public class StateSemanticsAnnotation extends Annotation<PWSState> {
         super(content);
         setOpaque(true);
         setBackground(Color.WHITE);
-        setBorder(BorderFactory.createLineBorder(Color.red, 1));
     }
 
     @Override
@@ -178,6 +179,33 @@ public class StateSemanticsAnnotation extends Annotation<PWSState> {
                     exitX += fm.stringWidth(sep);
                 }
             }
+            // After drawing all semantics, adjust border color:
+            boolean allOk = true;
+            // 1) Check actual semantics vs. constraints
+            constraintStrs.clear();
+            if (state.getConstraintsSemantics() != null) {
+                for (Object cfg : state.getConstraintsSemantics().getConfigurations()) {
+                    constraintStrs.add(cfg.toString());
+                }
+            }
+            for (Object cfg : state.getStateSemantics().getConfigurations()) {
+                if (!state.isPseudoState() && !constraintStrs.contains(cfg.toString())) {
+                    allOk = false;
+                    break;
+                }
+            }
+            // 2) Check reactive exit-zones coverage
+            if (allOk) {
+                for (ExitZone ez : state.getReactiveSemantics()) {
+                    if (!covered.contains(ez.getTarget())) {
+                        allOk = false;
+                        break;
+                    }
+                }
+            }
+            // Set the border based on overall OK status
+            Color borderColor = allOk ? Color.GREEN.darker() : Color.RED;
+            setBorder(BorderFactory.createLineBorder(borderColor, 1));
         } catch (Exception ignored) {
         }
     }

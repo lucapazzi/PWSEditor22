@@ -37,6 +37,8 @@ import java.io.IOException;
 // ... rest of your imports ...
 
 public class PWSStateMachinePanel extends StateMachinePanel {
+    /** Whether to render state‐semantics annotations at all */
+    private boolean showStateAnnotations = false;
 
     public PWSStateMachinePanel(PWSStateMachine stateMachine) {
         super(stateMachine);
@@ -45,6 +47,20 @@ public class PWSStateMachinePanel extends StateMachinePanel {
         setFocusable(true);
         requestFocusInWindow();
         // Mouse listeners are inherited from StateMachinePanel.
+    }
+
+    /**
+     * Show or hide all state annotations in this panel.
+     * @param show true = display annotations; false = hide them
+     */
+    public void setShowStateAnnotations(boolean show) {
+        this.showStateAnnotations = show;
+        for (StateInterface si : stateMachine.getStates()) {
+            if (si instanceof PWSState p) {
+                p.setAnnotationVisible(show);
+            }
+        }
+        repaint();
     }
 
     /** Allow annotations to find the underlying state machine. */
@@ -69,7 +85,7 @@ public class PWSStateMachinePanel extends StateMachinePanel {
         for (StateInterface s : states) {
             if (s instanceof PWSState) {
                 PWSState pwsState = (PWSState) s;
-                if (pwsState.isAnnotationVisible() && pwsState.getAnnotation() != null) {
+                if (showStateAnnotations && pwsState.isAnnotationVisible() && pwsState.getAnnotation() != null) {
                     Point statePos = ((machinery.State) pwsState).getPosition();
                     int stateDiam = pwsState.getName().equals("PseudoState") ? PSEUDO_DIAMETER : DIAMETER;
                     int centerX = statePos.x + stateDiam / 2;
